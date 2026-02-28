@@ -13,6 +13,7 @@ A macOS floating clipboard manager inspired by Windows' built-in clipboard (Win+
 - 💾 **Persistent** - Pinned items saved to disk
 - 🖼️ **Image Resizing** - Screenshots resized to 1200px max (readable text, ~70% smaller)
 - 🚫 **Duplicate Prevention** - Won't add same content twice
+- 🎨 **Custom Icon** - Black background with clipboard icon (fits macOS dark theme)
 
 ## Installation
 
@@ -20,10 +21,25 @@ A macOS floating clipboard manager inspired by Windows' built-in clipboard (Win+
 # Build the app
 wails3 build
 
-# Or download from releases (when available)
+# Create the .app bundle (no terminal window!)
+./package.sh
 ```
 
-The binary will be at `bin/clipboard-island`.
+The app will be at `bin/Clipboard Island.app`.
+
+### Running without Terminal
+
+**Important:** Don't run the raw binary `./bin/clipboard-island` - it will show a terminal window!
+
+Instead, use one of these methods:
+
+1. **Double-click** `bin/Clipboard Island.app` in Finder
+2. **Command line:** `open 'bin/Clipboard Island.app'`
+3. **Install to Applications:**
+   ```bash
+   cp -r 'bin/Clipboard Island.app' /Applications/
+   # Now launch from Spotlight or Launchpad
+   ```
 
 ## Usage
 
@@ -51,6 +67,9 @@ go test ./...
 
 # Build for production
 wails3 build
+
+# Regenerate icon (if needed)
+go run generate_icon.go && ./update_icon.sh
 
 # Run in dev mode (hot reload)
 wails3 dev

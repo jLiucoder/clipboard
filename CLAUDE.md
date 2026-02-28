@@ -16,14 +16,15 @@ macOS floating clipboard manager inspired by Windows' built-in clipboard. Built 
 ## Build & Run
 
 ```bash
-wails3 build                    # produces bin/clipboard-island
+wails3 build                    # produces bin/clipboard-island binary
+./package.sh                    # creates bin/Clipboard Island.app bundle
 go test ./...                   # run unit tests (46 tests)
-./bin/clipboard-island          # run the app (tray icon, no dock icon)
+open 'bin/Clipboard Island.app' # run the app (no terminal, no dock icon)
 ```
 
-Frontend is built automatically by `wails3 build`. To rebuild frontend only: `cd frontend && npm run build`.
+**Important**: Don't run `./bin/clipboard-island` directly - it will show a terminal window! Always use the .app bundle or `open` command.
 
-**Important**: `go run .` only compiles Go — it embeds whatever is in `frontend/dist`. If you changed HTML/CSS/JS, you must run `wails3 build` (or `cd frontend && npm run build` first).
+Frontend is built automatically by `wails3 build`. To rebuild frontend only: `cd frontend && npm run build`.
 
 ## Usage
 
@@ -44,6 +45,7 @@ Frontend is built automatically by `wails3 build`. To rebuild frontend only: `cd
 | Clipboard | `golang.design/x/clipboard` (text + image support) |
 | Window chrome | Frameless, transparent background, CGo for macOS APIs |
 | Persistence | `github.com/adrg/xdg` (XDG data directory) |
+| Icon | Custom generated (black bg, white clipboard, fits macOS dark theme) |
 
 ### Key files
 
@@ -58,6 +60,10 @@ Frontend is built automatically by `wails3 build`. To rebuild frontend only: `cd
 - `frontend/src/main.js` — Renders history list, handles hotkey/keyboard/click events, keyboard navigation
 - `frontend/public/style.css` — macOS-native dark blur panel, header styles, clip rows, pin/delete buttons, selected state
 - `frontend/index.html` — Panel shell with draggable header and scrollable body
+- `package.sh` — Creates .app bundle (run after `wails3 build` to get a terminal-free app)
+- `generate_icon.go` — Go script to generate the app icon (black background, white clipboard)
+- `update_icon.sh` — Converts icon_1024.png to .icns format
+- `icon_1024.png` — Source icon file (1024x1024)
 
 ### Coordinate system (important)
 
