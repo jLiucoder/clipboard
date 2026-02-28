@@ -33,7 +33,7 @@ func decodeBase64(dataURI string) ([]byte, error) {
 }
 
 // resizeImage scales down large images to reduce memory usage.
-// Max dimension is 300px (maintains aspect ratio).
+// Max dimension is 1200px (maintains aspect ratio).
 func resizeImage(data []byte) ([]byte, error) {
 	// Decode image
 	img, _, err := image.Decode(bytes.NewReader(data))
