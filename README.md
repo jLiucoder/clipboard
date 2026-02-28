@@ -2,7 +2,8 @@
 
 A macOS floating clipboard manager inspired by Windows' built-in clipboard (Win+V). Built with [Wails v3](https://v3.wails.io/) (Go + vanilla JS).
 
-![Screenshot](image.png)
+<img width="1200" height="505" alt="image" src="https://github.com/user-attachments/assets/175d603b-b44e-4f1e-a908-f792cedec8d7" />
+
 
 ## Features
 
