@@ -6,11 +6,14 @@ const islandBody = document.getElementById("island-body");
 const islandCount = document.getElementById("island-count");
 
 let isOpen = false;
+let selectedIndex = -1;
+let allItems = [];
 
 // ── Render clipboard history ─────────────────────────────────────────────────
 function renderHistory(items) {
   // Clear current content
   islandBody.innerHTML = "";
+  allItems = items;
 
   if (items.length === 0) {
     const empty = document.createElement("div");
@@ -18,6 +21,7 @@ function renderHistory(items) {
     empty.textContent = "Copy text to get started";
     islandBody.appendChild(empty);
     islandCount.textContent = "0";
+    selectedIndex = -1;
     return;
   }
 
@@ -70,10 +74,40 @@ function renderHistory(items) {
     row.addEventListener("click", () => {
       selectAndPaste(index);
     });
+
+    // Mouse hover updates selection
+    row.addEventListener("mouseenter", () => {
+      updateSelection(index);
+    });
   });
 
   islandBody.appendChild(list);
   islandCount.textContent = String(items.length);
+
+  // Select first item by default
+  if (selectedIndex < 0 || selectedIndex >= items.length) {
+    selectedIndex = 0;
+  }
+  updateSelection(selectedIndex);
+}
+
+// ── Update selection highlight ───────────────────────────────────────────────
+function updateSelection(index) {
+  if (index < 0 || index >= allItems.length) return;
+
+  selectedIndex = index;
+
+  // Update visual selection
+  const rows = islandBody.querySelectorAll(".clip-row");
+  rows.forEach((row, i) => {
+    if (i === selectedIndex) {
+      row.classList.add("selected");
+      // Scroll into view if needed
+      row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    } else {
+      row.classList.remove("selected");
+    }
+  });
 }
 
 // ── Toggle pin status ─────────────────────────────────────────────────────────
@@ -98,6 +132,8 @@ async function deleteItem(index) {
 
 // ── Select and paste item ────────────────────────────────────────────────────
 async function selectAndPaste(index) {
+  if (index < 0 || index >= allItems.length) return;
+  
   try {
     isOpen = false;
     island.classList.remove("open");
@@ -123,6 +159,7 @@ Events.On("hotkey", () => {
   void island.offsetHeight;
   island.classList.add("open");
   isOpen = true;
+  selectedIndex = 0;
   window.focus();
   refreshHistory();
 });
@@ -146,6 +183,38 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     e.preventDefault();
     dismiss();
+    return;
+  }
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    const nextIndex = selectedIndex + 1;
+    if (nextIndex < allItems.length) {
+      updateSelection(nextIndex);
+    } else {
+      // Wrap to top
+      updateSelection(0);
+    }
+    return;
+  }
+
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    const prevIndex = selectedIndex - 1;
+    if (prevIndex >= 0) {
+      updateSelection(prevIndex);
+    } else {
+      // Wrap to bottom
+      updateSelection(allItems.length - 1);
+    }
+    return;
+  }
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+    if (selectedIndex >= 0 && selectedIndex < allItems.length) {
+      selectAndPaste(selectedIndex);
+    }
     return;
   }
 });

@@ -114,6 +114,14 @@ html, body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.clip-row.selected {
+  background: rgba(80, 140, 240, 0.35);
+}
+
+.clip-row.selected:hover {
+  background: rgba(80, 140, 240, 0.45);
+}
+
 .clip-text {
   flex: 1;
   white-space: pre-wrap;
