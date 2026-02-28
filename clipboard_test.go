@@ -424,3 +424,292 @@ func TestAddItem_CapPreservesPinned(t *testing.T) {
 		}
 	}
 }
+
+// TestAddImageItem_Basic verifies that images are added to history.
+func TestAddImageItem_Basic(t *testing.T) {
+	app := &App{}
+	// Create a simple fake image (PNG header)
+	fakeImage := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
+	fakeImage = append(fakeImage, make([]byte, 100)...) // Add some padding
+
+	app.addImageItem(fakeImage)
+
+	if len(app.history) != 1 {
+		t.Fatalf("expected 1 image item, got %d", len(app.history))
+	}
+	if app.history[0].Type != TypeImage {
+		t.Errorf("expected type to be TypeImage, got %s", app.history[0].Type)
+	}
+	if app.history[0].ImageData == "" {
+		t.Error("expected ImageData to be populated")
+	}
+}
+
+// TestAddImageItem_Dedup verifies that duplicate images are deduplicated.
+func TestAddImageItem_Dedup(t *testing.T) {
+	app := &App{}
+	fakeImage := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
+	fakeImage = append(fakeImage, make([]byte, 100)...)
+
+	app.addImageItem(fakeImage)
+	app.addImageItem(fakeImage) // Duplicate
+
+	if len(app.history) != 1 {
+		t.Fatalf("expected 1 image item after dedup, got %d", len(app.history))
+	}
+}
+
+// TestAddImageItem_DifferentImages verifies different images are stored separately.
+func TestAddImageItem_DifferentImages(t *testing.T) {
+	app := &App{}
+	fakeImage1 := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x01}
+	fakeImage1 = append(fakeImage1, make([]byte, 100)...)
+	fakeImage2 := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x02}
+	fakeImage2 = append(fakeImage2, make([]byte, 100)...)
+
+	app.addImageItem(fakeImage1)
+	app.addImageItem(fakeImage2)
+
+	if len(app.history) != 2 {
+		t.Fatalf("expected 2 image items, got %d", len(app.history))
+	}
+}
+
+// TestAddImageItem_Empty verifies empty image data is ignored.
+func TestAddImageItem_Empty(t *testing.T) {
+	app := &App{}
+	app.addImageItem([]byte{})
+	app.addImageItem(nil)
+
+	if len(app.history) != 0 {
+		t.Errorf("expected 0 items, got %d", len(app.history))
+	}
+}
+
+// TestClipItem_ImageType verifies ClipItem works with image type.
+func TestClipItem_ImageType(t *testing.T) {
+	item := ClipItem{
+		Type:      TypeImage,
+		ImageData: "data:image/png;base64,abc123",
+		Pinned:    false,
+	}
+
+	if item.Type != TypeImage {
+		t.Errorf("expected TypeImage, got %s", item.Type)
+	}
+	if item.Text != "" {
+		t.Error("expected empty Text for image item")
+	}
+	if item.ImageData == "" {
+		t.Error("expected ImageData to be set")
+	}
+}
+
+// TestHashBytes verifies hashBytes produces consistent results.
+func TestHashBytes(t *testing.T) {
+	data1 := []byte("test data")
+	data2 := []byte("test data")
+	data3 := []byte("different data")
+
+	hash1 := hashBytes(data1)
+	hash2 := hashBytes(data2)
+	hash3 := hashBytes(data3)
+
+	if hash1 != hash2 {
+		t.Error("same data should produce same hash")
+	}
+	if hash1 == hash3 {
+		t.Error("different data should produce different hash")
+	}
+
+	// Empty data should return empty string
+	emptyHash := hashBytes([]byte{})
+	if emptyHash != "" {
+		t.Error("empty data should return empty hash")
+	}
+}
+
+// TestEncodeDecodeBase64 verifies base64 encoding and decoding.
+func TestEncodeDecodeBase64(t *testing.T) {
+	original := []byte("hello world test data 123")
+	encoded := encodeBase64(original)
+
+	if encoded == "" {
+		t.Fatal("encoded string should not be empty")
+	}
+
+	// Decode
+	decoded, err := decodeBase64(encoded)
+	if err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+
+	if string(decoded) != string(original) {
+		t.Errorf("decoded doesn't match original: got %s, want %s", decoded, original)
+	}
+}
+
+// TestDecodeBase64_WithPrefix verifies decoding with data URI prefix.
+func TestDecodeBase64_WithPrefix(t *testing.T) {
+	original := []byte("test data")
+	encoded := encodeBase64(original)
+	withPrefix := "data:image/png;base64," + encoded
+
+	decoded, err := decodeBase64(withPrefix)
+	if err != nil {
+		t.Fatalf("decode with prefix failed: %v", err)
+	}
+
+	if string(decoded) != string(original) {
+		t.Errorf("decoded doesn't match: got %s, want %s", decoded, original)
+	}
+}
+
+// TestTrimToCap_AllPinned verifies trimToCap with all items pinned.
+func TestTrimToCap_AllPinned(t *testing.T) {
+	app := &App{}
+
+	// Add 35 items, all pinned
+	for i := 0; i < 35; i++ {
+		app.history = append(app.history, ClipItem{
+			Type:   TypeText,
+			Text:   string(rune('a' + i%26)),
+			Pinned: true,
+		})
+	}
+
+	app.history = app.trimToCap()
+
+	// Should keep all 35 pinned items (cap only applies to non-pinned eviction)
+	if len(app.history) != 35 {
+		t.Errorf("expected 35 pinned items (all kept), got %d", len(app.history))
+	}
+}
+
+// TestTrimToCap_NoPinned verifies trimToCap with no pinned items.
+func TestTrimToCap_NoPinned(t *testing.T) {
+	app := &App{}
+
+	// Add 35 items, none pinned
+	for i := 0; i < 35; i++ {
+		app.history = append(app.history, ClipItem{
+			Type:   TypeText,
+			Text:   string(rune('a' + i%26)),
+			Pinned: false,
+		})
+	}
+
+	app.history = app.trimToCap()
+
+	// Should cap at 30
+	if len(app.history) != 30 {
+		t.Errorf("expected 30 items (capped), got %d", len(app.history))
+	}
+
+	// Should keep the first 30 (newest) - items 0-29 ('a' through 'd' with wrap)
+	for i := 0; i < 30; i++ {
+		expectedChar := string(rune('a' + (i % 26)))
+		if app.history[i].Text != expectedChar {
+			t.Errorf("position %d: expected '%s', got '%s'", i, expectedChar, app.history[i].Text)
+		}
+	}
+}
+
+// TestTrimToCap_Empty verifies trimToCap with empty history.
+func TestTrimToCap_Empty(t *testing.T) {
+	app := &App{}
+	app.history = app.trimToCap()
+
+	if len(app.history) != 0 {
+		t.Errorf("expected 0 items, got %d", len(app.history))
+	}
+}
+
+// TestGetHistory_Empty verifies GetHistory with empty history.
+func TestGetHistory_Empty(t *testing.T) {
+	app := &App{}
+	history := app.GetHistory()
+
+	if history == nil {
+		t.Error("GetHistory should return empty slice, not nil")
+	}
+	if len(history) != 0 {
+		t.Errorf("expected 0 items, got %d", len(history))
+	}
+}
+
+// TestDeleteItem_First deletes the first item.
+func TestDeleteItem_First(t *testing.T) {
+	app := &App{}
+	app.addItem("first")
+	app.addItem("second")
+	app.addItem("third")
+
+	app.DeleteItem(0) // Delete first ("third")
+
+	if len(app.history) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(app.history))
+	}
+	if app.history[0].Text != "second" {
+		t.Errorf("expected first to be 'second', got '%s'", app.history[0].Text)
+	}
+}
+
+// TestDeleteItem_Last deletes the last item.
+func TestDeleteItem_Last(t *testing.T) {
+	app := &App{}
+	app.addItem("first")
+	app.addItem("second")
+	app.addItem("third")
+
+	app.DeleteItem(2) // Delete last ("first")
+
+	if len(app.history) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(app.history))
+	}
+	if app.history[1].Text != "second" {
+		t.Errorf("expected last to be 'second', got '%s'", app.history[1].Text)
+	}
+}
+
+// TestAddItem_TypeField verifies Type field is set correctly.
+func TestAddItem_TypeField(t *testing.T) {
+	app := &App{}
+	app.addItem("test text")
+
+	if app.history[0].Type != TypeText {
+		t.Errorf("expected TypeText, got %s", app.history[0].Type)
+	}
+}
+
+// BenchmarkGetHistory benchmarks getting history.
+func BenchmarkGetHistory(b *testing.B) {
+	app := &App{}
+	for i := 0; i < 30; i++ {
+		app.addItem(string(rune('a' + i)))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = app.GetHistory()
+	}
+}
+
+// BenchmarkAddImageItem benchmarks adding image items.
+func BenchmarkAddImageItem(b *testing.B) {
+	app := &App{}
+	fakeImage := make([]byte, 10000)
+	fakeImage[0] = 0x89
+	fakeImage[1] = 0x50
+	fakeImage[2] = 0x4E
+	fakeImage[3] = 0x47
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Clear history periodically to avoid cap
+		if i%30 == 0 {
+			app.history = nil
+		}
+		app.addImageItem(fakeImage)
+	}
+}

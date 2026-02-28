@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -20,7 +21,8 @@ type App struct {
 	mu              sync.Mutex
 	history         []ClipItem
 	lastChangeCount int
-	lastWritten     string // Tracks text we just wrote to clipboard (to avoid re-capturing)
+	lastWritten     string    // Tracks text we just wrote to clipboard (to avoid re-capturing)
+	lastPasteTime   time.Time // Timestamp of last paste to prevent re-capturing our own paste
 }
 
 // capturePreviousApp records which app currently has focus so we can restore it later.

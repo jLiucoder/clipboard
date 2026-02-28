@@ -7,6 +7,7 @@ require (
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.73
 	golang.design/x/clipboard v0.7.1
 	golang.design/x/hotkey v0.4.1
+	golang.org/x/image v0.35.0
 )
 
 require (
@@ -45,7 +46,6 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/exp/shiny v0.0.0-20250606033433-dcc06ee1d476 // indirect
-	golang.org/x/image v0.35.0 // indirect
 	golang.org/x/mobile v0.0.0-20250606033058-a2a15c67f36f // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect

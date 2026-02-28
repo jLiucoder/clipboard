@@ -133,6 +133,15 @@ html, body {
   padding-right: 8px;
 }
 
+/* ── Clip Image ─────────────────────────────────────────────────────────────── */
+.clip-image {
+  flex: 1;
+  max-width: 280px;
+  max-height: 80px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
 /* ── Clip Actions (Pin/Delete buttons) ──────────────────────────────────────── */
 .clip-actions {
   display: flex;

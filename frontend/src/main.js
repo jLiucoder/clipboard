@@ -18,7 +18,7 @@ function renderHistory(items) {
   if (items.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "Copy text to get started";
+    empty.textContent = "Copy text or images to get started";
     islandBody.appendChild(empty);
     islandCount.textContent = "0";
     selectedIndex = -1;
@@ -35,9 +35,19 @@ function renderHistory(items) {
     row.className = "clip-row" + (item.pinned ? " pinned" : "");
     row.dataset.index = index;
 
-    const text = document.createElement("div");
-    text.className = "clip-text";
-    text.textContent = item.text;
+    // Content: text or image
+    if (item.type === "image") {
+      const img = document.createElement("img");
+      img.className = "clip-image";
+      img.src = item.imageData || item.ImageData;
+      img.alt = "Clipboard image";
+      row.appendChild(img);
+    } else {
+      const text = document.createElement("div");
+      text.className = "clip-text";
+      text.textContent = item.text || item.Text;
+      row.appendChild(text);
+    }
 
     // Action buttons container
     const actions = document.createElement("div");
@@ -46,8 +56,8 @@ function renderHistory(items) {
     // Pin button (☆/★)
     const pinBtn = document.createElement("button");
     pinBtn.className = "clip-btn pin-btn";
-    pinBtn.textContent = item.pinned ? "★" : "☆";
-    pinBtn.title = item.pinned ? "Unpin" : "Pin";
+    pinBtn.textContent = (item.pinned || item.Pinned) ? "★" : "☆";
+    pinBtn.title = (item.pinned || item.Pinned) ? "Unpin" : "Pin";
     pinBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       togglePin(index);
@@ -66,7 +76,6 @@ function renderHistory(items) {
     actions.appendChild(pinBtn);
     actions.appendChild(delBtn);
 
-    row.appendChild(text);
     row.appendChild(actions);
     list.appendChild(row);
 

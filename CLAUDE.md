@@ -1,18 +1,38 @@
-# Clipboard
+# Clipboard Island
 
-macOS floating panel app. Built with Wails v3 (Go backend + vanilla JS frontend). Currently a minimal shell — hotkey shows the window, Escape dismisses it.
+macOS floating clipboard manager inspired by Windows' built-in clipboard. Built with Wails v3 (Go backend + vanilla JS frontend). Captures text and images, shows them in a floating panel at your cursor.
+
+## Features
+
+- **Text & Image Support** - Copy text or screenshots (Cmd+Shift+4), both appear in the panel
+- **30 Item History** - Automatically capped, pinned items preserved
+- **Pin Items** - ☆/★ toggle to keep items across restarts
+- **One-Click Paste** - Click or press Enter to paste at cursor position
+- **Keyboard Navigation** - ↑/↓ arrows to select, Enter to paste, Escape to dismiss
+- **Persistent Pins** - Pinned items saved to `~/.clipboard-island/history.json`
+- **Image Resizing** - Screenshots resized to 1200px max to save memory while keeping text readable
+- **Duplicate Prevention** - Same content won't be added twice; pasting won't re-capture
 
 ## Build & Run
 
 ```bash
 wails3 build                    # produces bin/clipboard-island
-go test ./...                   # run unit tests
+go test ./...                   # run unit tests (46 tests)
 ./bin/clipboard-island          # run the app (tray icon, no dock icon)
 ```
 
 Frontend is built automatically by `wails3 build`. To rebuild frontend only: `cd frontend && npm run build`.
 
 **Important**: `go run .` only compiles Go — it embeds whatever is in `frontend/dist`. If you changed HTML/CSS/JS, you must run `wails3 build` (or `cd frontend && npm run build` first).
+
+## Usage
+
+1. **Copy** text or image (Cmd+C or screenshot)
+2. **Open** clipboard island with Cmd+Shift+V
+3. **Navigate** with arrow keys or mouse hover
+4. **Paste** selected item with Enter or click
+5. **Pin** important items with ☆ button (persists across restarts)
+6. **Delete** items with × button
 
 ## Architecture
 
@@ -21,18 +41,23 @@ Frontend is built automatically by `wails3 build`. To rebuild frontend only: `cd
 | Backend | Go, Wails v3 alpha.73 |
 | Frontend | Vanilla JS + Vite, `@wailsio/runtime` |
 | Hotkey | `golang.design/x/hotkey` (Cmd+Shift+V to show) |
+| Clipboard | `golang.design/x/clipboard` (text + image support) |
 | Window chrome | Frameless, transparent background, CGo for macOS APIs |
+| Persistence | `github.com/adrg/xdg` (XDG data directory) |
 
 ### Key files
 
-- `main.go` — Wails app bootstrap, window config, tray icon, Cmd+Shift+V hotkey goroutine, `showIsland()`
-- `app.go` — `App` service struct, focus capture/restore (`capturePreviousApp`, `restorePreviousApp`), `HideWindow()`
+- `main.go` — Wails app bootstrap, window config, tray icon, Cmd+Shift+V hotkey goroutine, clipboard watching
+- `app.go` — `App` service struct, focus capture/restore (`capturePreviousApp`, `restorePreviousApp`), `HideWindow()`, `lastPasteTime` tracking
+- `clipboard.go` — Core clipboard logic: `ClipItem` struct, `addItem()`, `addImageItem()`, `GetHistory()`, `TogglePin()`, `DeleteItem()`, `SelectItem()`, persistence
+- `clipboard_darwin.go` — CGo helper for `NSPasteboard changeCount`
+- `clipboard_test.go` — 46 unit tests covering text, images, pins, caps, dedup
 - `position.go` — Pure `calcWindowPosition()` function (flip-anchor logic to keep panel in-bounds)
 - `position_test.go` — Unit tests for positioning: edge cases, boundary sweep
 - `cursor_darwin.go` — CGo helper: mouse position + screen size in scaled pixels (macOS only)
-- `frontend/src/main.js` — Listens for `hotkey` event to show island, Escape to dismiss
-- `frontend/public/style.css` — macOS-native dark blur panel, header styles
-- `frontend/index.html` — Panel shell with draggable header and empty body
+- `frontend/src/main.js` — Renders history list, handles hotkey/keyboard/click events, keyboard navigation
+- `frontend/public/style.css` — macOS-native dark blur panel, header styles, clip rows, pin/delete buttons, selected state
+- `frontend/index.html` — Panel shell with draggable header and scrollable body
 
 ### Coordinate system (important)
 
@@ -44,7 +69,33 @@ Window width is locked at 380px (MinWidth = MaxWidth). Height is 370px. User can
 
 ### Focus capture
 
-On hotkey, `capturePreviousApp()` records the frontmost app's PID via AppleScript. On dismiss (Escape or click-outside), `restorePreviousApp()` re-activates it.
+On hotkey, `capturePreviousApp()` records the frontmost app's PID via AppleScript. On dismiss (Escape or click-outside), `restorePreviousApp()` re-activates it. When pasting, the app:
+1. Writes content to clipboard
+2. Hides the window
+3. Restores previous app focus
+4. Simulates Cmd+V keystroke
+
+### Clipboard watching
+
+The watcher polls every 200ms (1s when idle) and:
+1. Checks `changeCount` to detect changes
+2. Tries to read image first, then text
+3. Skips if within 500ms of a paste (prevents self-capture)
+4. Resizes images to max 1200px before storing
+5. Stores as base64 data URLs for frontend display
+
+### Data model
+
+```go
+type ClipItem struct {
+    Type      string  // "text" or "image"
+    Text      string  // For text items
+    ImageData string  // Base64 data URL for images
+    Pinned    bool    // Persisted to disk
+}
+```
+
+History is capped at 30 items. Pinned items are never evicted. On startup, pinned items are loaded from `~/.clipboard-island/history.json`.
 
 ## Platform notes
 

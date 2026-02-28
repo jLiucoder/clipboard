@@ -1,61 +1,105 @@
-# Welcome to Your New Wails3 Project!
+# Clipboard Island
 
-Congratulations on generating your Wails3 application! This README will guide you through the next steps to get your project up and running.
+A macOS floating clipboard manager inspired by Windows' built-in clipboard (Win+V). Built with [Wails v3](https://v3.wails.io/) (Go + vanilla JS).
 
-## Getting Started
+![Screenshot](image.png)
 
-1. Navigate to your project directory in the terminal.
+## Features
 
-2. To run your application in development mode, use the following command:
+- 📋 **Text & Image Support** - Copy text or screenshots, both appear in the floating panel
+- 📌 **Pin Items** - Keep important clips across app restarts
+- 🎯 **One-Click Paste** - Click or press Enter to paste at cursor position
+- ⌨️ **Keyboard Navigation** - Arrow keys to select, Enter to paste, Escape to dismiss
+- 💾 **Persistent** - Pinned items saved to disk
+- 🖼️ **Image Resizing** - Screenshots resized to 1200px max (readable text, ~70% smaller)
+- 🚫 **Duplicate Prevention** - Won't add same content twice
 
-   ```
-   wails3 dev
-   ```
+## Installation
 
-   This will start your application and enable hot-reloading for both frontend and backend changes.
+```bash
+# Build the app
+wails3 build
 
-3. To build your application for production, use:
+# Or download from releases (when available)
+```
 
-   ```
-   wails3 build
-   ```
+The binary will be at `bin/clipboard-island`.
 
-   This will create a production-ready executable in the `build` directory.
+## Usage
 
-## Exploring Wails3 Features
+1. **Copy** anything (Cmd+C or screenshot with Cmd+Shift+4)
+2. **Open** Clipboard Island with **Cmd+Shift+V**
+3. **Navigate** with ↑/↓ arrow keys or mouse
+4. **Paste** with Enter or click on an item
+5. **Pin** ☆ items you want to keep (persists across restarts)
+6. **Delete** × items you don't need
 
-Now that you have your project set up, it's time to explore the features that Wails3 offers:
+### Keyboard Shortcuts
 
-1. **Check out the examples**: The best way to learn is by example. Visit the `examples` directory in the `v3/examples` directory to see various sample applications.
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+Shift+V` | Show/hide clipboard island |
+| `↑` / `↓` | Navigate items (wraps around) |
+| `Enter` | Paste selected item |
+| `Escape` | Dismiss without pasting |
 
-2. **Run an example**: To run any of the examples, navigate to the example's directory and use:
+## Development
 
-   ```
-   go run .
-   ```
+```bash
+# Run tests
+go test ./...
 
-   Note: Some examples may be under development during the alpha phase.
+# Build for production
+wails3 build
 
-3. **Explore the documentation**: Visit the [Wails3 documentation](https://v3.wails.io/) for in-depth guides and API references.
+# Run in dev mode (hot reload)
+wails3 dev
 
-4. **Join the community**: Have questions or want to share your progress? Join the [Wails Discord](https://discord.gg/JDdSxwjhGf) or visit the [Wails discussions on GitHub](https://github.com/wailsapp/wails/discussions).
+# Build frontend only
+cd frontend && npm run build
+```
 
-## Project Structure
+**Note**: `go run .` only compiles Go code. If you changed frontend files (HTML/CSS/JS), run `wails3 build` first.
 
-Take a moment to familiarize yourself with your project structure:
+## Architecture
 
-- `frontend/`: Contains your frontend code (HTML, CSS, JavaScript/TypeScript)
-- `main.go`: The entry point of your Go backend
-- `app.go`: Define your application structure and methods here
-- `wails.json`: Configuration file for your Wails project
+| Component | Technology |
+|-----------|------------|
+| Backend | Go 1.25, Wails v3 |
+| Frontend | Vanilla JS, Vite |
+| Hotkey | `golang.design/x/hotkey` |
+| Clipboard | `golang.design/x/clipboard` |
+| Persistence | JSON via `adrg/xdg` |
 
-## Next Steps
+### Key Files
 
-1. Modify the frontend in the `frontend/` directory to create your desired UI.
-2. Add backend functionality in `main.go`.
-3. Use `wails3 dev` to see your changes in real-time.
-4. When ready, build your application with `wails3 build`.
+- `main.go` - App bootstrap, window config, hotkey, clipboard watcher
+- `app.go` - App service, focus capture/restore
+- `clipboard.go` - Core clipboard logic (add, get, pin, delete, persist)
+- `clipboard_darwin.go` - macOS CGo helpers
+- `clipboard_test.go` - 46 unit tests
+- `frontend/src/main.js` - UI rendering, keyboard handling
+- `frontend/public/style.css` - macOS-native styling
 
-Happy coding with Wails3! If you encounter any issues or have questions, don't hesitate to consult the documentation or reach out to the Wails community.
+## How It Works
 
+1. **Clipboard Watching** - Polls every 200ms (1s when idle) for changes
+2. **Image Handling** - Resizes large images to 1200px max, stores as base64
+3. **History** - Keeps last 30 items, pinned items never evicted
+4. **Pasting** - Writes to clipboard, restores previous app focus, simulates Cmd+V
+5. **Persistence** - Pinned items saved to `~/.clipboard-island/history.json`
 
+## Requirements
+
+- macOS (uses CGo, AppleScript, `ActivationPolicyAccessory`)
+- Go 1.25+
+- Wails CLI v3
+
+## License
+
+MIT
+
+## Acknowledgments
+
+- Built with [Wails v3](https://v3.wails.io/)
+- Inspired by Windows' built-in clipboard manager
