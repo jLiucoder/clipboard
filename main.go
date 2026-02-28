@@ -23,6 +23,11 @@ func main() {
 
 	appService := &App{}
 
+	// Initialize clipboard
+	if err := appService.initClipboard(); err != nil {
+		log.Fatalf("[clipboard] failed to init clipboard: %v", err)
+	}
+
 	wailsApp := application.New(application.Options{
 		Name:        "Clipboard",
 		Description: "Clipboard manager",
@@ -106,6 +111,12 @@ func main() {
 			showIsland()
 		}
 	}()
+
+	// Load saved history (pinned items)
+	appService.loadHistory()
+
+	// Start clipboard watching in background
+	go appService.watchClipboard()
 
 	if err := wailsApp.Run(); err != nil {
 		log.Fatal(err)

@@ -4,6 +4,7 @@ import (
 	"log"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -14,6 +15,12 @@ type App struct {
 	wailsApp *application.App
 
 	prevAppPID string // PID of the app that was frontmost before we showed
+
+	// Clipboard history
+	mu              sync.Mutex
+	history         []ClipItem
+	lastChangeCount int
+	lastWritten     string // Tracks text we just wrote to clipboard (to avoid re-capturing)
 }
 
 // capturePreviousApp records which app currently has focus so we can restore it later.
